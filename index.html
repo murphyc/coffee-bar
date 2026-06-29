@@ -739,7 +739,7 @@
  
                         <div class="form-group">
                             <label>Years of Experience</label>
-                            <input type="number" id="experience" placeholder="e.g., 2" min="0" max="99">
+                            <input type="number" id="experience" placeholder="e.g., 0.5 or 2" min="0" max="99" step="0.1">
                         </div>
  
                         <div class="form-group">
@@ -944,9 +944,11 @@
  
         function updateForm() {
             const name = document.getElementById('name').value.trim();
-            const experience = document.getElementById('experience').value;
+            const expRaw = document.getElementById('experience').value;
+            const experience = parseFloat(expRaw);
+            const expValid = expRaw !== '' && !isNaN(experience) && experience >= 0;
             const hasSlots = Object.keys(formData.availableSundays).length > 0;
-            document.getElementById('submitBtn').disabled = !name || !experience || !hasSlots;
+            document.getElementById('submitBtn').disabled = !name || !expValid || !hasSlots;
         }
  
         function updateConfirmation() {
@@ -972,9 +974,10 @@
         // ============================================================
         async function addVolunteer() {
             const name = document.getElementById('name').value.trim();
-            const experience = parseInt(document.getElementById('experience').value);
+            const expRaw = document.getElementById('experience').value;
+            const experience = parseFloat(expRaw);
  
-            if (!name || !experience || Object.keys(formData.availableSundays).length === 0) return;
+            if (!name || expRaw === '' || isNaN(experience) || experience < 0 || Object.keys(formData.availableSundays).length === 0) return;
  
             document.getElementById('submitBtn').disabled = true;
  
@@ -1118,7 +1121,7 @@
                     <div class="volunteer-item">
                         <div class="volunteer-info">
                             <h3>${vol.name}</h3>
-                            <p>${vol.experience} year${vol.experience !== 1 ? 's' : ''} of experience</p>
+                            <p>${vol.experience} year${vol.experience === 1 ? '' : 's'} of experience</p>
                             <p style="font-size: 0.75rem; margin-top: 0.5rem;">
                                 ${slotCount} time slot${slotCount !== 1 ? 's' : ''} across ${sundayCount} Sunday${sundayCount !== 1 ? 's' : ''}
                             </p>
@@ -1237,29 +1240,42 @@
             let html = `<div class="selections-table-wrap">`;
             html += `
                 <div class="legend">
-                    <div class="legend-item"><span class="slot-mark am">AM</span> 10&ndash;11 AM only</div>
-                    <div class="legend-item"><span class="slot-mark pm">PM</span> 6&ndash;7 PM only</div>
-                    <div class="legend-item"><span class="slot-mark both">AM/PM</span> Both slots</div>
+                    <div class="legend-item"><span class="slot-mark am">AM</span> 10&ndash;11 AM</div>
+                    <div class="legend-item"><span class="slot-mark pm">PM</span> 6&ndash;7 PM</div>
                     <div class="legend-item"><span class="slot-mark none">&ndash;</span> Not available</div>
                 </div>
             `;
-            html += `<table class="selections-table"><thead><tr>`;
-            html += `<th class="name-col">Name</th><th>Experience</th>`;
-            sundays.forEach(sunday => { html += `<th>${sunday.shortDisplay}</th>`; });
-            html += `</tr></thead><tbody>`;
+ 
+            // Two header rows: first row = date (spanning 2 cols), second row = AM/PM
+            html += `<table class="selections-table"><thead>`;
+            html += `<tr>`;
+            html += `<th class="name-col" rowspan="2">Name</th>`;
+            html += `<th rowspan="2">Experience</th>`;
+            sundays.forEach(sunday => {
+                html += `<th colspan="2" style="text-align:center; border-left: 1px solid #c5d2cd;">${sunday.shortDisplay}</th>`;
+            });
+            html += `</tr>`;
+            html += `<tr>`;
+            sundays.forEach(() => {
+                html += `<th style="text-align:center; border-left: 1px solid #c5d2cd; font-size: 0.7rem;">AM</th>`;
+                html += `<th style="text-align:center; font-size: 0.7rem;">PM</th>`;
+            });
+            html += `</tr>`;
+            html += `</thead><tbody>`;
  
             volunteers.forEach(vol => {
                 html += `<tr><td class="name-col"><strong>${vol.name}</strong></td>`;
-                html += `<td>${vol.experience} yr${vol.experience !== 1 ? 's' : ''}</td>`;
+                html += `<td>${vol.experience} yr${vol.experience === 1 ? '' : 's'}</td>`;
                 sundays.forEach(sunday => {
-                    const slots = vol.availableSundays[sunday.id];
-                    let cell = '<span class="slot-mark none">&ndash;</span>';
-                    if (slots) {
-                        if (slots.morning && slots.evening) cell = '<span class="slot-mark both">AM/PM</span>';
-                        else if (slots.morning) cell = '<span class="slot-mark am">AM</span>';
-                        else if (slots.evening) cell = '<span class="slot-mark pm">PM</span>';
-                    }
-                    html += `<td>${cell}</td>`;
+                    const slots = vol.availableSundays[sunday.id] || {};
+                    const amCell = slots.morning
+                        ? '<span class="slot-mark am">AM</span>'
+                        : '<span class="slot-mark none">&ndash;</span>';
+                    const pmCell = slots.evening
+                        ? '<span class="slot-mark pm">PM</span>'
+                        : '<span class="slot-mark none">&ndash;</span>';
+                    html += `<td style="text-align:center; border-left: 1px solid #e3ebe8;">${amCell}</td>`;
+                    html += `<td style="text-align:center;">${pmCell}</td>`;
                 });
                 html += `</tr>`;
             });
