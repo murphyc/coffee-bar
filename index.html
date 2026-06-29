@@ -825,7 +825,7 @@
         let volunteers = [];
         let editingId = null; // if set, we are editing an existing row
         let formData = { name: '', experience: '', availableSundays: {} };
-        let anonymized = false;
+        let scheduleGenerated = false;
         let suggestions = [];
 
         function init() {
@@ -1144,13 +1144,13 @@
             html += '</div>';
             list.innerHTML = html;
             document.getElementById('generateBtn').style.display = 'flex';
-            anonymized = false;
+            scheduleGenerated = false;
             document.getElementById('scheduleGrid').innerHTML = '';
             document.getElementById('scheduleExportBar').style.display = 'none';
         }
 
         // ============================================================
-        // GENERATE ANONYMIZED SCHEDULE
+        // GENERATE SCHEDULE
         // ============================================================
         function generateSuggestions() {
             const schedule = {};
@@ -1163,14 +1163,14 @@
                     if (schedule[sundayId]) {
                         if (slots.morning && schedule[sundayId].morning.length < 2) {
                             schedule[sundayId].morning.push({
-                                anonymousName: `Frank ${String.fromCharCode(65 + schedule[sundayId].morning.length)}`,
+                                name: vol.name,
                                 experience: vol.experience,
                                 originalId: vol.id
                             });
                         }
                         if (slots.evening && schedule[sundayId].evening.length < 2) {
                             schedule[sundayId].evening.push({
-                                anonymousName: `Frank ${String.fromCharCode(65 + schedule[sundayId].evening.length)}`,
+                                name: vol.name,
                                 experience: vol.experience,
                                 originalId: vol.id
                             });
@@ -1187,15 +1187,11 @@
             }));
 
             renderScheduleGrid();
-            anonymized = true;
+            scheduleGenerated = true;
         }
 
         function renderScheduleGrid() {
             let html = `
-                <div class="info-box">
-                    <strong>Anonymized Schedule</strong><br>
-                    All volunteers appear as "Frank" to maintain privacy during scheduling
-                </div>
                 <div class="schedule-grid">
             `;
 
@@ -1211,8 +1207,8 @@
                                 </div>
                                 ${week.morning.length > 0 ? week.morning.map(vol => `
                                     <div class="frank-card">
-                                        <div class="frank-name">${vol.anonymousName}</div>
-                                        <div class="frank-experience">${vol.experience} year${vol.experience !== 1 ? 's' : ''} experience</div>
+                                        <div class="frank-name">${vol.name}</div>
+                                        <div class="frank-experience">${vol.experience} year${vol.experience === 1 ? '' : 's'} experience</div>
                                     </div>
                                 `).join('') : '<div class="empty-slot">No volunteers available</div>'}
                             </div>
@@ -1223,8 +1219,8 @@
                                 </div>
                                 ${week.evening.length > 0 ? week.evening.map(vol => `
                                     <div class="frank-card">
-                                        <div class="frank-name">${vol.anonymousName}</div>
-                                        <div class="frank-experience">${vol.experience} year${vol.experience !== 1 ? 's' : ''} experience</div>
+                                        <div class="frank-name">${vol.name}</div>
+                                        <div class="frank-experience">${vol.experience} year${vol.experience === 1 ? '' : 's'} experience</div>
                                     </div>
                                 `).join('') : '<div class="empty-slot">No volunteers available</div>'}
                             </div>
@@ -1356,7 +1352,7 @@
         }
 
         function exportScheduleCSV() {
-            if (!anonymized || suggestions.length === 0) return;
+            if (!scheduleGenerated || suggestions.length === 0) return;
 
             const rows = [['Date', 'Slot', 'Volunteer', 'Experience (years)']];
             suggestions.forEach(week => {
@@ -1369,14 +1365,14 @@
                     rows.push([week.display, '10 AM - 11 AM', '(no volunteers)', '']);
                 } else {
                     week.morning.forEach(vol => {
-                        rows.push([week.display, '10 AM - 11 AM', vol.anonymousName, vol.experience]);
+                        rows.push([week.display, '10 AM - 11 AM', vol.name, vol.experience]);
                     });
                 }
                 if (week.evening.length === 0) {
                     rows.push([week.display, '6 PM - 7 PM', '(no volunteers)', '']);
                 } else {
                     week.evening.forEach(vol => {
-                        rows.push([week.display, '6 PM - 7 PM', vol.anonymousName, vol.experience]);
+                        rows.push([week.display, '6 PM - 7 PM', vol.name, vol.experience]);
                     });
                 }
             });
